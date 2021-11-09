@@ -1,3 +1,5 @@
-CPPFLAGS=-I../include -I../include/nlohmann
-CXXFLAGS=-std=c++17 -Wall
+CPPFLAGS=-I../include
+CXXFLAGS=-std=c++17 -Wall -O2
 test: test.cpp
+clean:
+	$(RM) test output.json output_pretty.json
