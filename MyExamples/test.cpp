@@ -22,9 +22,16 @@ int main()
   for (auto x : v)std::cout<<x<<" ";
   std::cout<<std::endl;
   //boolean
-  auto happy=j1["happy"].get<bool>();
+//  auto happy=j1["happy"].get<bool>();
+  // Alternative with default
+  auto happy=j1.extract("happy",false);
   std::cout<<std::boolalpha<<happy<<std::endl;
-  //more complex structures
+  auto sad=j1.extract("sad",false);
+
+  std::cout<<std::boolalpha<<sad<<std::endl;
+  
+    //more complex structures
+
   auto money = j1["object"]["value"].get<double>();
   std::cout<<money<<std::endl;
 // write on file (compact form)
