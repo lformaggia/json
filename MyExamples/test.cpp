@@ -19,8 +19,11 @@ int main()
   std::cout<<s<<std::endl;
   // vectors
   auto v = j1["list"].get<std::vector<double>>();
+  auto vs =j1["stringlist"].get<std::vector<std::string>>();
   for (auto x : v)std::cout<<x<<" ";
   std::cout<<std::endl;
+  for (auto x : vs)std::cout<<x<<" ";
+ std::cout<<std::endl;
   //boolean
 //  auto happy=j1["happy"].get<bool>();
   // Alternative with default
