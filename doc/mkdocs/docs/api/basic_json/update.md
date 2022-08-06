@@ -1,4 +1,4 @@
-# basic_json::update
+# <small>nlohmann::basic_json::</small>update
 
 ```cpp
 // (1)
@@ -9,7 +9,7 @@ void update(const_iterator first, const_iterator last, bool merge_objects = fals
 ```
 
 1. Inserts all values from JSON object `j`.
-2. Inserts all values from from range `[first, last)`
+2. Inserts all values from range `[first, last)`
 
 When `merge_objects` is `#!c false` (default), existing keys are overwritten. When `merge_objects` is `#!c true`,
 recursively merges objects with common keys.
@@ -37,7 +37,7 @@ function.
 1. The function can throw the following exceptions:
     - Throws [`type_error.312`](../../home/exceptions.md#jsonexceptiontype_error312) if called on JSON values other than
       objects; example: `"cannot use update() with string"`
-2. The function can throw thw following exceptions:
+2. The function can throw the following exceptions:
     - Throws [`type_error.312`](../../home/exceptions.md#jsonexceptiontype_error312) if called on JSON values other than
       objects; example: `"cannot use update() with string"`
     - Throws [`invalid_iterator.202`](../../home/exceptions.md#jsonexceptioninvalid_iterator202) if called on an
@@ -50,7 +50,7 @@ function.
 1. O(N*log(size() + N)), where N is the number of elements to insert.
 2. O(N*log(size() + N)), where N is the number of elements to insert.
 
-## Example
+## Examples
 
 ??? example
 
