@@ -4,7 +4,7 @@
 
 # This version is for the use in the course "advanced modelling for scientific computing" by L. Formaggia, MOX, Politecnico di Milano, Italy.
 
-AMSC_DIR=../../Examples/
+AMSC_DIR=../../../../Examples/
 
 rm -r -f ${AMSC_DIR}/include/nlohmann
 mkdir ${AMSC_DIR}/include/nlohmann
