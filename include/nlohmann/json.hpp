@@ -57,7 +57,6 @@
 #include <nlohmann/detail/output/binary_writer.hpp>
 #include <nlohmann/detail/output/output_adapters.hpp>
 #include <nlohmann/detail/output/serializer.hpp>
-#include <nlohmann/detail/string_escape.hpp>
 #include <nlohmann/detail/value_t.hpp>
 #include <nlohmann/json_fwd.hpp>
 #include <nlohmann/ordered_map.hpp>
@@ -2042,37 +2041,6 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
             JSON_THROW(out_of_range::create(403, detail::concat("key '", string_t(std::forward<KeyType>(key)), "' not found"), this));
         }
         return it->second;
-    }
-/*!
- * @brief extract value with default
- *
- * @tparam ValueType The default type determines the return type (and the default value)
- * @param key The key to be searched
- * @param def The default value.
- * @return Either the value corresponding to the key or the default if the key not presente in the json structure
- * @author Luca Formaggia
- */
-    template<class ValueType>
-    ValueType extract(const typename object_t::key_type& key, ValueType const& def) const
-    {
-        // at only works for objects
-        if (JSON_HEDLEY_LIKELY(is_object()))
-        {
-            JSON_TRY
-            {
-              auto & ret=m_value.object->at(key);
-              return ret.template get<ValueType>();
-            }
-            JSON_CATCH(std::out_of_range&)
-            {
-                // create better exception explanation
-                return def;
-            }
-        }
-        else
-        {
-            JSON_THROW(type_error::create(304, "cannot use extract() with " + std::string(type_name()), *this));
-        }
     }
 
     /// @brief access specified array element
@@ -4206,10 +4174,6 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
         }
     }
 
-    JSON_PRIVATE_UNLESS_TESTED :
-      //////////////////////
-      // member variables //
-      //////////////////////
 
   JSON_PRIVATE_UNLESS_TESTED:
     //////////////////////
@@ -4709,16 +4673,6 @@ class basic_json // NOLINT(cppcoreguidelines-special-member-functions,hicpp-spec
 
         const auto get_op = [](const std::string & op)
         {
-            add,
-            remove,
-            replace,
-            move,
-            copy,
-            test,
-            invalid
-        };
-
-        const auto get_op = [](const std::string& op) {
             if (op == "add")
             {
                 return patch_operations::add;
