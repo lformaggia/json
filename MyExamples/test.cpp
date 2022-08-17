@@ -27,9 +27,9 @@ int main()
   //boolean
 //  auto happy=j1["happy"].get<bool>();
   // Alternative with default
-  auto happy=j1.extract("happy",false);
+  auto happy=j1.value("happy",false);
   std::cout<<std::boolalpha<<happy<<std::endl;
-  auto sad=j1.extract("sad",false);
+  auto sad=j1.value("sad",false);
 
   std::cout<<std::boolalpha<<sad<<std::endl;
   
