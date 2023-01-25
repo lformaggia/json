@@ -13,7 +13,7 @@ execute_process(COMMAND ${ASTYLE_TOOL} --version OUTPUT_VARIABLE ASTYLE_TOOL_VER
 string(REGEX MATCH "[0-9]+(\\.[0-9]+)+" ASTYLE_TOOL_VERSION "${ASTYLE_TOOL_VERSION}")
 message(STATUS "🔖 Artistic Style ${ASTYLE_TOOL_VERSION} (${ASTYLE_TOOL})")
 
-find_program(CLANG_TOOL NAMES clang++-HEAD clang++-15 clang++-14 clang++-13 clang++-12 clang++-11 clang++)
+find_program(CLANG_TOOL NAMES clang++-HEAD clang++-16 clang++-15 clang++-14 clang++-13 clang++-12 clang++-11 clang++)
 execute_process(COMMAND ${CLANG_TOOL} --version OUTPUT_VARIABLE CLANG_TOOL_VERSION ERROR_VARIABLE CLANG_TOOL_VERSION)
 string(REGEX MATCH "[0-9]+(\\.[0-9]+)+" CLANG_TOOL_VERSION "${CLANG_TOOL_VERSION}")
 message(STATUS "🔖 Clang ${CLANG_TOOL_VERSION} (${CLANG_TOOL})")
@@ -30,7 +30,7 @@ execute_process(COMMAND ${CPPCHECK_TOOL} --version OUTPUT_VARIABLE CPPCHECK_TOOL
 string(REGEX MATCH "[0-9]+(\\.[0-9]+)+" CPPCHECK_TOOL_VERSION "${CPPCHECK_TOOL_VERSION}")
 message(STATUS "🔖 Cppcheck ${CPPCHECK_TOOL_VERSION} (${CPPCHECK_TOOL})")
 
-find_program(GCC_TOOL NAMES g++-latest g++-HEAD g++-11 g++-10)
+find_program(GCC_TOOL NAMES g++-latest g++-HEAD g++-12 g++-11 g++-10)
 execute_process(COMMAND ${GCC_TOOL} --version OUTPUT_VARIABLE GCC_TOOL_VERSION ERROR_VARIABLE GCC_TOOL_VERSION)
 string(REGEX MATCH "[0-9]+(\\.[0-9]+)+" GCC_TOOL_VERSION "${GCC_TOOL_VERSION}")
 message(STATUS "🔖 GCC ${GCC_TOOL_VERSION} (${GCC_TOOL})")
@@ -466,7 +466,7 @@ endforeach()
 ###############################################################################
 
 add_custom_target(ci_test_noexceptions
-    COMMAND CXX=${CLANG_TOOL} ${CMAKE_COMMAND}
+    COMMAND ${CMAKE_COMMAND}
     -DCMAKE_BUILD_TYPE=Debug -GNinja
     -DJSON_BuildTests=ON -DCMAKE_CXX_FLAGS=-DJSON_NOEXCEPTION -DDOCTEST_TEST_FILTER=--no-throw
     -S${PROJECT_SOURCE_DIR} -B${PROJECT_BINARY_DIR}/build_noexceptions
@@ -480,7 +480,7 @@ add_custom_target(ci_test_noexceptions
 ###############################################################################
 
 add_custom_target(ci_test_noimplicitconversions
-    COMMAND CXX=${CLANG_TOOL} ${CMAKE_COMMAND}
+    COMMAND ${CMAKE_COMMAND}
     -DCMAKE_BUILD_TYPE=Debug -GNinja
     -DJSON_BuildTests=ON -DJSON_ImplicitConversions=OFF
     -S${PROJECT_SOURCE_DIR} -B${PROJECT_BINARY_DIR}/build_noimplicitconversions
@@ -494,7 +494,7 @@ add_custom_target(ci_test_noimplicitconversions
 ###############################################################################
 
 add_custom_target(ci_test_diagnostics
-    COMMAND CXX=${CLANG_TOOL} ${CMAKE_COMMAND}
+    COMMAND ${CMAKE_COMMAND}
     -DCMAKE_BUILD_TYPE=Debug -GNinja
     -DJSON_BuildTests=ON -DJSON_Diagnostics=ON
     -S${PROJECT_SOURCE_DIR} -B${PROJECT_BINARY_DIR}/build_diagnostics
@@ -508,7 +508,7 @@ add_custom_target(ci_test_diagnostics
 ###############################################################################
 
 add_custom_target(ci_test_legacycomparison
-    COMMAND CXX=${CLANG_TOOL} ${CMAKE_COMMAND}
+    COMMAND ${CMAKE_COMMAND}
     -DCMAKE_BUILD_TYPE=Debug -GNinja
     -DJSON_BuildTests=ON -DJSON_LegacyDiscardedValueComparison=ON
     -S${PROJECT_SOURCE_DIR} -B${PROJECT_BINARY_DIR}/build_legacycomparison
@@ -522,7 +522,7 @@ add_custom_target(ci_test_legacycomparison
 ###############################################################################
 
 add_custom_target(ci_test_noglobaludls
-    COMMAND CXX=${CLANG_TOOL} ${CMAKE_COMMAND}
+    COMMAND ${CMAKE_COMMAND}
     -DCMAKE_BUILD_TYPE=Debug -GNinja
     -DJSON_BuildTests=ON -DJSON_FastTests=ON -DJSON_GlobalUDLs=OFF
     -DCMAKE_CXX_FLAGS=-DJSON_TEST_NO_GLOBAL_UDLS
@@ -667,8 +667,11 @@ add_custom_target(ci_cppcheck
 ###############################################################################
 
 add_custom_target(ci_cpplint
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/cpplint/cpplint.py --filter=-whitespace,-legal,-runtime/references,-runtime/explicit,-runtime/indentation_namespace,-readability/casting,-readability/nolint --quiet --recursive ${SRC_FILES}
+    COMMAND ${Python3_EXECUTABLE} -mvenv venv_cpplint
+    COMMAND venv_cpplint/bin/pip3 --quiet install cpplint
+    COMMAND venv_cpplint/bin/cpplint --filter=-whitespace,-legal,-runtime/references,-runtime/explicit,-runtime/indentation_namespace,-readability/casting,-readability/nolint --quiet --recursive ${SRC_FILES}
     COMMENT "Check code with cpplint"
+    WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
 )
 
 ###############################################################################
@@ -833,27 +836,17 @@ add_custom_target(ci_benchmarks
 ###############################################################################
 
 function(ci_get_cmake version var)
-    if (APPLE)
-        set(${var} ${PROJECT_BINARY_DIR}/cmake-${version}-Darwin64/CMake.app/Contents/bin/cmake)
-        add_custom_command(
-            OUTPUT ${${var}}
-            COMMAND wget -nc https://github.com/Kitware/CMake/releases/download/v${version}/cmake-${version}-Darwin64.tar.gz
-            COMMAND tar xfz cmake-${version}-Darwin64.tar.gz
-            COMMAND rm cmake-${version}-Darwin64.tar.gz
-            WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
-            COMMENT "Download CMake ${version}"
-        )
-    else()
-        set(${var} ${PROJECT_BINARY_DIR}/cmake-${version}-Linux-x86_64/bin/cmake)
-        add_custom_command(
-            OUTPUT ${${var}}
-            COMMAND wget -nc https://github.com/Kitware/CMake/releases/download/v${version}/cmake-${version}-Linux-x86_64.tar.gz
-            COMMAND tar xfz cmake-${version}-Linux-x86_64.tar.gz
-            COMMAND rm cmake-${version}-Linux-x86_64.tar.gz
-            WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
-            COMMENT "Download CMake ${version}"
-        )
-    endif()
+    set(${var} ${PROJECT_BINARY_DIR}/cmake-${version}/bin/cmake)
+    add_custom_command(
+        OUTPUT ${${var}}
+        COMMAND wget -nc https://github.com/Kitware/CMake/releases/download/v${version}/cmake-${version}.tar.gz
+        COMMAND tar xfz cmake-${version}.tar.gz
+        COMMAND rm cmake-${version}.tar.gz
+        COMMAND ${CMAKE_COMMAND} -S cmake-${version} -B cmake-${version}
+        COMMAND ${CMAKE_COMMAND} --build cmake-${version} --parallel 10
+        WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
+        COMMENT "Download CMake ${version}"
+    )
     set(${var} ${${var}} PARENT_SCOPE)
 endfunction()
 
@@ -928,6 +921,17 @@ foreach(COMPILER g++-4.8 g++-4.9 g++-5 g++-6 g++-7 g++-8 g++-9 g++-10 g++-11 cla
     endif()
     unset(COMPILER_TOOL CACHE)
 endforeach()
+
+add_custom_target(ci_test_compiler_default
+    COMMAND ${CMAKE_COMMAND}
+        -DCMAKE_BUILD_TYPE=Debug -GNinja
+        -DJSON_BuildTests=ON -DJSON_FastTests=ON
+        -S${PROJECT_SOURCE_DIR} -B${PROJECT_BINARY_DIR}/build_compiler_default
+        ${ADDITIONAL_FLAGS}
+    COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}/build_compiler_default --parallel ${N}
+    COMMAND cd ${PROJECT_BINARY_DIR}/build_compiler_default && ${CMAKE_CTEST_COMMAND} --parallel ${N} --exclude-regex "test-unicode" -LE git_required --output-on-failure
+    COMMENT "Compile and test with default C++ compiler"
+)
 
 ###############################################################################
 # CUDA example
