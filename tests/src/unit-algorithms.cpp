@@ -1,9 +1,9 @@
 //     __ _____ _____ _____
 //  __|  |   __|     |   | |  JSON for Modern C++ (supporting code)
-// |  |  |__   |  |  | | | |  version 3.11.2
+// |  |  |__   |  |  | | | |  version 3.11.3
 // |_____|_____|_____|_|___|  https://github.com/nlohmann/json
 //
-// SPDX-FileCopyrightText: 2013-2022 Niels Lohmann <https://nlohmann.me>
+// SPDX-FileCopyrightText: 2013-2023 Niels Lohmann <https://nlohmann.me>
 // SPDX-License-Identifier: MIT
 
 #include "doctest_compatibility.h"
@@ -319,7 +319,6 @@ TEST_CASE("algorithms")
         }
     }
 
-
     SECTION("copy")
     {
         SECTION("copy without if")
@@ -335,7 +334,6 @@ TEST_CASE("algorithms")
         {
             json dest_arr;
             const json source_arr = {0, 3, 6, 9, 12, 15, 20};
-
 
             std::copy_if(source_arr.begin(), source_arr.end(), std::back_inserter(dest_arr), [](const json & _value)
             {
@@ -363,7 +361,5 @@ TEST_CASE("algorithms")
             CHECK(dest_arr == json{'1', '2', '3', '4'});
         }
     }
-
-
 
 }
