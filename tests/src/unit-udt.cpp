@@ -1,9 +1,9 @@
 //     __ _____ _____ _____
 //  __|  |   __|     |   | |  JSON for Modern C++ (supporting code)
-// |  |  |__   |  |  | | | |  version 3.11.2
+// |  |  |__   |  |  | | | |  version 3.11.3
 // |_____|_____|_____|_|___|  https://github.com/nlohmann/json
 //
-// SPDX-FileCopyrightText: 2013-2022 Niels Lohmann <https://nlohmann.me>
+// SPDX-FileCopyrightText: 2013-2023 Niels Lohmann <https://nlohmann.me>
 // SPDX-License-Identifier: MIT
 
 #include "doctest_compatibility.h"
@@ -52,27 +52,30 @@ struct address
 
 struct person
 {
-    age m_age{};
-    name m_name{};
-    country m_country{};
+    age m_age{}; // NOLINT(readability-redundant-member-init)
+    name m_name{}; // NOLINT(readability-redundant-member-init)
+    country m_country{}; // NOLINT(readability-redundant-member-init)
     person() = default;
     person(const age& a, name  n, const country& c) : m_age(a), m_name(std::move(n)), m_country(c) {}
 };
 
 struct contact
 {
-    person m_person{};
-    address m_address{};
+    person m_person{}; // NOLINT(readability-redundant-member-init)
+    address m_address{}; // NOLINT(readability-redundant-member-init)
     contact() = default;
     contact(person p, address a) : m_person(std::move(p)), m_address(std::move(a)) {}
 };
 
+enum class book_id : std::uint64_t;
+
 struct contact_book
 {
-    name m_book_name{};
-    std::vector<contact> m_contacts{};
+    name m_book_name{}; // NOLINT(readability-redundant-member-init)
+    book_id m_book_id{};
+    std::vector<contact> m_contacts{}; // NOLINT(readability-redundant-member-init)
     contact_book() = default;
-    contact_book(name n, std::vector<contact> c) : m_book_name(std::move(n)), m_contacts(std::move(c)) {}
+    contact_book(name n, book_id i, std::vector<contact> c) : m_book_name(std::move(n)), m_book_id(i), m_contacts(std::move(c)) {}
 };
 } // namespace udt
 
@@ -129,7 +132,7 @@ static void to_json(nlohmann::json& j, const contact& c)
 
 static void to_json(nlohmann::json& j, const contact_book& cb)
 {
-    j = json{{"name", cb.m_book_name}, {"contacts", cb.m_contacts}};
+    j = json{{"name", cb.m_book_name}, {"id", cb.m_book_id}, {"contacts", cb.m_contacts}};
 }
 
 // operators
@@ -161,8 +164,8 @@ static bool operator==(const contact& lhs, const contact& rhs)
 
 static bool operator==(const contact_book& lhs, const contact_book& rhs)
 {
-    return std::tie(lhs.m_book_name, lhs.m_contacts) ==
-           std::tie(rhs.m_book_name, rhs.m_contacts);
+    return std::tie(lhs.m_book_name, lhs.m_book_id, lhs.m_contacts) ==
+           std::tie(rhs.m_book_name, rhs.m_book_id, rhs.m_contacts);
 }
 } // namespace udt
 
@@ -219,6 +222,7 @@ static void from_json(const nlohmann::json& j, contact& c)
 static void from_json(const nlohmann::json& j, contact_book& cb)
 {
     cb.m_book_name = j["name"].get<name>();
+    cb.m_book_id = j["id"].get<book_id>();
     cb.m_contacts = j["contacts"].get<std::vector<contact>>();
 }
 } // namespace udt
@@ -237,7 +241,8 @@ TEST_CASE("basic usage" * doctest::test_suite("udt"))
     const udt::person senior_programmer{{42}, {"王芳"}, udt::country::china};
     const udt::address addr{"Paris"};
     const udt::contact cpp_programmer{sfinae_addict, addr};
-    const udt::contact_book book{{"C++"}, {cpp_programmer, {senior_programmer, addr}}};
+    const udt::book_id large_id{static_cast<udt::book_id>(static_cast<std::uint64_t>(1) << 63)}; // verify large unsigned enums are handled correctly
+    const udt::contact_book book{{"C++"}, static_cast<udt::book_id>(42u), {cpp_programmer, {senior_programmer, addr}}};
 
     SECTION("conversion to json via free-functions")
     {
@@ -248,21 +253,26 @@ TEST_CASE("basic usage" * doctest::test_suite("udt"))
         CHECK(json("Paris") == json(addr));
         CHECK(json(cpp_programmer) ==
               R"({"person" : {"age":23, "name":"theo", "country":"France"}, "address":"Paris"})"_json);
+        CHECK(json(large_id) == json(static_cast<std::uint64_t>(1) << 63));
+        CHECK(json(large_id) > 0u);
+        CHECK(to_string(json(large_id)) == "9223372036854775808");
+        CHECK(json(large_id).is_number_unsigned());
 
         CHECK(
             json(book) ==
-            R"({"name":"C++", "contacts" : [{"person" : {"age":23, "name":"theo", "country":"France"}, "address":"Paris"}, {"person" : {"age":42, "country":"中华人民共和国", "name":"王芳"}, "address":"Paris"}]})"_json);
+            R"({"name":"C++", "id":42, "contacts" : [{"person" : {"age":23, "name":"theo", "country":"France"}, "address":"Paris"}, {"person" : {"age":42, "country":"中华人民共和国", "name":"王芳"}, "address":"Paris"}]})"_json);
 
     }
 
     SECTION("conversion from json via free-functions")
     {
         const auto big_json =
-            R"({"name":"C++", "contacts" : [{"person" : {"age":23, "name":"theo", "country":"France"}, "address":"Paris"}, {"person" : {"age":42, "country":"中华人民共和国", "name":"王芳"}, "address":"Paris"}]})"_json;
+            R"({"name":"C++", "id":42, "contacts" : [{"person" : {"age":23, "name":"theo", "country":"France"}, "address":"Paris"}, {"person" : {"age":42, "country":"中华人民共和国", "name":"王芳"}, "address":"Paris"}]})"_json;
         SECTION("via explicit calls to get")
         {
             const auto parsed_book = big_json.get<udt::contact_book>();
             const auto book_name = big_json["name"].get<udt::name>();
+            const auto book_id = big_json["id"].get<udt::book_id>();
             const auto contacts =
                 big_json["contacts"].get<std::vector<udt::contact>>();
             const auto contact_json = big_json["contacts"].at(0);
@@ -282,6 +292,7 @@ TEST_CASE("basic usage" * doctest::test_suite("udt"))
             CHECK(contact == cpp_programmer);
             CHECK(contacts == book.m_contacts);
             CHECK(book_name == udt::name{"C++"});
+            CHECK(book_id == book.m_book_id);
             CHECK(book == parsed_book);
         }
 
@@ -303,6 +314,7 @@ TEST_CASE("basic usage" * doctest::test_suite("udt"))
         {
             const udt::contact_book parsed_book = big_json;
             const udt::name book_name = big_json["name"];
+            const udt::book_id book_id = big_json["id"];
             const std::vector<udt::contact> contacts = big_json["contacts"];
             const auto contact_json = big_json["contacts"].at(0);
             const udt::contact contact = contact_json;
@@ -320,6 +332,7 @@ TEST_CASE("basic usage" * doctest::test_suite("udt"))
             CHECK(contact == cpp_programmer);
             CHECK(contacts == book.m_contacts);
             CHECK(book_name == udt::name{"C++"});
+            CHECK(book_id == static_cast<udt::book_id>(42u));
             CHECK(book == parsed_book);
         }
 #endif
@@ -330,7 +343,7 @@ namespace udt
 {
 struct legacy_type
 {
-    std::string number{};
+    std::string number{}; // NOLINT(readability-redundant-member-init)
     legacy_type() = default;
     legacy_type(std::string n) : number(std::move(n)) {}
 };
@@ -418,15 +431,15 @@ TEST_CASE("adl_serializer specialization" * doctest::test_suite("udt"))
     {
         SECTION("to_json")
         {
-            udt::legacy_type lt{"4242"};
+            udt::legacy_type const lt{"4242"};
 
-            json j = lt;
+            json const j = lt;
             CHECK(j.get<int>() == 4242);
         }
 
         SECTION("from_json")
         {
-            json j = 4242;
+            json const j = 4242;
             auto lt = j.get<udt::legacy_type>();
             CHECK(lt.number == "4242");
         }
@@ -459,7 +472,7 @@ struct adl_serializer<std::vector<float>>
 
 TEST_CASE("even supported types can be specialized" * doctest::test_suite("udt"))
 {
-    json j = std::vector<float> {1.0, 2.0, 3.0};
+    json const j = std::vector<float> {1.0, 2.0, 3.0};
     CHECK(j.dump() == R"("hijacked!")");
     auto f = j.get<std::vector<float>>();
     // the single argument from_json method is preferred
@@ -566,7 +579,7 @@ struct pod_serializer
         // calling get calls from_json, for now, we cannot do this in custom
         // serializers
         nlohmann::from_json(j, value);
-        auto* bytes = static_cast<char*>(static_cast<void*>(&value));
+        auto* bytes = static_cast<char*>(static_cast<void*>(&value)); // NOLINT(bugprone-casting-through-void)
         std::memcpy(&t, bytes, sizeof(value));
     }
 
@@ -585,7 +598,7 @@ struct pod_serializer
                    std::is_pod<U>::value && std::is_class<U>::value, int >::type = 0 >
     static void to_json(BasicJsonType& j, const  T& t) noexcept
     {
-        const auto* bytes = static_cast< const unsigned char*>(static_cast<const void*>(&t));
+        const auto* bytes = static_cast< const unsigned char*>(static_cast<const void*>(&t));  // NOLINT(bugprone-casting-through-void)
         std::uint64_t value = 0;
         std::memcpy(&value, bytes, sizeof(value));
         nlohmann::to_json(j, value);
@@ -603,7 +616,7 @@ struct small_pod
 
 struct non_pod
 {
-    std::string s{};
+    std::string s{}; // NOLINT(readability-redundant-member-init)
     non_pod() = default;
     non_pod(std::string S) : s(std::move(S)) {}
 };
@@ -644,14 +657,14 @@ TEST_CASE("custom serializer for pods" * doctest::test_suite("udt"))
         std::int64_t, std::uint64_t, double, std::allocator, pod_serializer>;
 
     auto p = udt::small_pod{42, '/', 42};
-    custom_json j = p;
+    custom_json const j = p;
 
     auto p2 = j.get<udt::small_pod>();
 
     CHECK(p == p2);
 
     auto np = udt::non_pod{{"non-pod"}};
-    custom_json j2 = np;
+    custom_json const j2 = np;
     auto np2 = j2.get<udt::non_pod>();
     CHECK(np == np2);
 }
@@ -681,8 +694,8 @@ TEST_CASE("custom serializer that does adl by default" * doctest::test_suite("ud
 {
     auto me = udt::person{{23}, {"theo"}, udt::country::france};
 
-    json j = me;
-    custom_json cj = me;
+    json const j = me;
+    custom_json const cj = me;
 
     CHECK(j.dump() == cj.dump());
 
@@ -694,21 +707,21 @@ TEST_CASE("different basic_json types conversions")
 {
     SECTION("null")
     {
-        json j;
+        json const j;
         custom_json cj = j;
         CHECK(cj == nullptr);
     }
 
     SECTION("boolean")
     {
-        json j = true;
+        json const j = true;
         custom_json cj = j;
         CHECK(cj == true);
     }
 
     SECTION("discarded")
     {
-        json j(json::value_t::discarded);
+        json const j(json::value_t::discarded);
         custom_json cj;
         CHECK_NOTHROW(cj = j);
         CHECK(cj.type() == custom_json::value_t::discarded);
@@ -716,35 +729,35 @@ TEST_CASE("different basic_json types conversions")
 
     SECTION("array")
     {
-        json j = {1, 2, 3};
-        custom_json cj = j;
+        json const j = {1, 2, 3};
+        custom_json const cj = j;
         CHECK((cj == std::vector<int> {1, 2, 3}));
     }
 
     SECTION("integer")
     {
-        json j = 42;
+        json const j = 42;
         custom_json cj = j;
         CHECK(cj == 42);
     }
 
     SECTION("float")
     {
-        json j = 42.0;
+        json const j = 42.0;
         custom_json cj = j;
         CHECK(cj == 42.0);
     }
 
     SECTION("unsigned")
     {
-        json j = 42u;
+        json const j = 42u;
         custom_json cj = j;
         CHECK(cj == 42u);
     }
 
     SECTION("string")
     {
-        json j = "forty-two";
+        json const j = "forty-two";
         custom_json cj = j;
         CHECK(cj == "forty-two");
     }
@@ -761,7 +774,7 @@ TEST_CASE("different basic_json types conversions")
 
     SECTION("object")
     {
-        json j = {{"forty", "two"}};
+        json const j = {{"forty", "two"}};
         custom_json cj = j;
         auto m = j.get<std::map<std::string, std::string>>();
         CHECK(cj == m);
@@ -769,7 +782,7 @@ TEST_CASE("different basic_json types conversions")
 
     SECTION("get<custom_json>")
     {
-        json j = 42;
+        json const j = 42;
         custom_json cj = j.get<custom_json>();
         CHECK(cj == 42);
     }
@@ -857,8 +870,8 @@ class no_iterator_type
 
 TEST_CASE("compatible array type, without iterator type alias")
 {
-    no_iterator_type vec{1, 2, 3};
-    json j = vec;
+    no_iterator_type const vec{1, 2, 3};
+    json const j = vec;
 }
 
 DOCTEST_GCC_SUPPRESS_WARNING_POP

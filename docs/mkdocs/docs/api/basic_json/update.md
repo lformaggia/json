@@ -82,7 +82,7 @@ function.
 
 ??? example
 
-    One common usecase for this function is the handling of user settings. Assume your application can configured in
+    One common use case for this function is the handling of user settings. Assume your application can be configured in
     some aspects:
 
     ```json
@@ -139,4 +139,4 @@ function.
 ## Version history
 
 - Added in version 3.0.0.
-- Added `merge_objects` parameter in 3.10.4.
+- Added `merge_objects` parameter in 3.10.5.
