@@ -42,3 +42,8 @@
 
 # Swift Package Manager build directory
 /.build
+
+/tools/astyle/venv/
+
+# Bazel-related
+MODULE.bazel.lock
